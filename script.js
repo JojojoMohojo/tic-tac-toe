@@ -30,17 +30,11 @@ const GameBoard = (() => {
         return validMove;
     }
 
-    const printBoard = () => {
-      const boardWithCellValues = board.map((row) => row.map((cell) => cell.getValue()))
-      console.log(boardWithCellValues);
-    };
-
     const checkForDraw = () => {
         const allCellsFilled = board.every(row => row.every(cell => cell.getValue() !== 0));
         return allCellsFilled;
     };
     
-
     const checkForWin = () => {
         return checkRowWin() || checkColumnWin() || checkDiagonalWin();
     }
@@ -79,7 +73,7 @@ const GameBoard = (() => {
         return false;
     };
     
-    return { getBoard, placeMarker, printBoard, checkForWin, checkForDraw, checkRowWin, checkColumnWin, checkDiagonalWin, resetBoard };
+    return { getBoard, placeMarker, checkForWin, checkForDraw, checkRowWin, checkColumnWin, checkDiagonalWin, resetBoard };
 })();
 
 function Cell() {
@@ -135,12 +129,17 @@ const DOMController = (() => {
         display.innerHTML = text;
     }
 
+    const updateButtonState = () => {
+        console.log("Game active state:", game.getGameActive());
+        newGame.disabled = game.getGameActive();
+    }
+
     const init = () => {
         spaces.forEach(space => space.addEventListener("click", handleSpaceClick));
         newGame.addEventListener("click", () => game.resetGame());
     };
 
-    return { renderBoard, resetBoard, updateDisplay, init };
+    return { renderBoard, resetBoard, updateDisplay, updateButtonState, init };
 })();
 
 function GameController(
@@ -174,26 +173,19 @@ function GameController(
     
     const switchPlayerTurn = () => {
         activePlayer = activePlayer === players[0] ? players[1] : players[0];
-        domController.updateDisplay(`${activePlayer.name}'s turn.`)
-    };
+        domController.updateDisplay(`${getActivePlayer().name}'s turn.`)
+    };  
 
-    const printNewRound = () => {
-        board.printBoard();
-        console.log(`${getActivePlayer().name}'s turn.`);
-    };    
-
-    const handleWin = (player) => {
-        board.printBoard();
-        console.log(`${getActivePlayer().name} wins!`);
+    const handleWin = () => {
         domController.updateDisplay(`${getActivePlayer().name} wins!`);
         gameActive = false;
+        domController.updateButtonState();
     }
 
     const handleDraw = () => {
-        board.printBoard();
-        console.log(`Draw!`);
         domController.updateDisplay("Draw!");
         gameActive = false;
+        domController.updateButtonState();
     }
 
     const resetGame = () => {
@@ -201,27 +193,22 @@ function GameController(
         gameActive = true;
         board.resetBoard();
         domController.resetBoard();
-        console.log("Game start!");
-        console.log(`${getActivePlayer().name}'s turn.`);
         domController.updateDisplay(`${getActivePlayer().name}'s turn.`)
+        domController.updateButtonState();
     }
 
     const playRound = (row, column) => {
         const validMove = board.placeMarker(row - 1, column - 1, getActivePlayer().marker);
-        if (!validMove) {
-            console.log("Invalid move: Space occupied");
-        } else {
-            console.log(`Placing ${getActivePlayer().name}'s marker on space ${row}-${column}...`);
+        if (validMove) {
             domController.renderBoard(board.getBoard());
             if (board.checkForWin()) {
-                handleWin(getActivePlayer());
+                handleWin();
                 return;
             } else if (board.checkForDraw()){
                 handleDraw();
                 return;
             }
             switchPlayerTurn();
-            printNewRound();
         }
     }
 
