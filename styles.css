@@ -86,9 +86,12 @@ body {
 }
 
 .text-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: 24pt;
   background-color: #F4EDED;
-  height: 80px;
+  height: 60px;
   width: 400px;
   border: solid #877666 6px;
   border-radius: 4px;

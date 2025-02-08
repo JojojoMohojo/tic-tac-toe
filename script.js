@@ -3,12 +3,22 @@ const GameBoard = (() => {
     const columns = 3;
     const board = [];
 
-    for (let i = 0; i < rows; i++) {
-        board[i] = [];
-        for (let j = 0; j < columns; j++) {
-            board[i].push(Cell());
+    const resetBoard = () => {
+        if (board.length === 0) {
+            for (let i = 0; i < rows; i++) {
+                board[i] = [];
+                for (let j = 0; j < columns; j++) {
+                    board[i].push(Cell());
+                }
+            }
+        } else { 
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < columns; j++) {
+                    board[i][j] = Cell();
+                }
+            }
         }
-    }
+    };
 
     const getBoard = () => board;
 
@@ -24,6 +34,16 @@ const GameBoard = (() => {
       const boardWithCellValues = board.map((row) => row.map((cell) => cell.getValue()))
       console.log(boardWithCellValues);
     };
+
+    const checkForDraw = () => {
+        const allCellsFilled = board.every(row => row.every(cell => cell.getValue() !== 0));
+        return allCellsFilled;
+    };
+    
+
+    const checkForWin = () => {
+        return checkRowWin() || checkColumnWin() || checkDiagonalWin();
+    }
 
     const checkRowWin = () => {
         for (let i = 0; i < rows; i++) {
@@ -59,7 +79,7 @@ const GameBoard = (() => {
         return false;
     };
     
-    return { getBoard, placeMarker, printBoard, checkRowWin, checkColumnWin, checkDiagonalWin };
+    return { getBoard, placeMarker, printBoard, checkForWin, checkForDraw, checkRowWin, checkColumnWin, checkDiagonalWin, resetBoard };
 })();
 
 function Cell() {
@@ -73,6 +93,55 @@ function Cell() {
 
   return { addMarker, getValue };
 }
+
+const DOMController = (() => {
+    const spaces = document.querySelectorAll(".board-space");
+    const newGame = document.querySelector(".new-game-button");
+    const display = document.querySelector(".text-display");
+
+    const renderBoard = (board) => {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const index = i * 3 + j;
+                if (board[i][j].getValue() === 1) {
+                    spaces[index].innerHTML = "x";
+                } else if (board[i][j].getValue() === 2) {
+                    spaces[index].innerHTML = "o";
+                } else {
+                    spaces[index].innerHTML = "";
+                }
+            }
+        }
+    }
+
+    const handleSpaceClick = (event) => {
+        if (!game.getGameActive()) {
+            return;
+        }
+
+        const index = Array.from(spaces).indexOf(event.target);
+        const row = Math.floor(index / 3);
+        const column = index % 3;
+
+        game.playRound(row + 1, column + 1);
+        renderBoard(GameBoard.getBoard());
+    }
+
+    const resetBoard = () => {
+        spaces.forEach((space) => space.innerHTML = "");
+    }
+
+    const updateDisplay = (text) => {
+        display.innerHTML = text;
+    }
+
+    const init = () => {
+        spaces.forEach(space => space.addEventListener("click", handleSpaceClick));
+        newGame.addEventListener("click", () => game.resetGame());
+    };
+
+    return { renderBoard, resetBoard, updateDisplay, init };
+})();
 
 function GameController(
     playerOneName = "Player One",
@@ -92,26 +161,49 @@ function GameController(
         }
     ];
 
-    let activePlayer = players[0];
+    const pickRandomPlayer = () => {
+        return Math.floor(Math.random() * 2);
+    };
+
+    let gameActive = false;
+    let activePlayer = players[pickRandomPlayer()];
 
     const getActivePlayer = () => activePlayer;
 
+    const getGameActive = () => gameActive;
+    
     const switchPlayerTurn = () => {
         activePlayer = activePlayer === players[0] ? players[1] : players[0];
+        domController.updateDisplay(`${activePlayer.name}'s turn.`)
     };
 
     const printNewRound = () => {
         board.printBoard();
         console.log(`${getActivePlayer().name}'s turn.`);
-    };
-    
-    const displayWinScreen = (player) => {
+    };    
+
+    const handleWin = (player) => {
         board.printBoard();
         console.log(`${getActivePlayer().name} wins!`);
+        domController.updateDisplay(`${getActivePlayer().name} wins!`);
+        gameActive = false;
     }
 
-    const checkForWin = () => {
-        return board.checkRowWin() || board.checkColumnWin() || board.checkDiagonalWin();
+    const handleDraw = () => {
+        board.printBoard();
+        console.log(`Draw!`);
+        domController.updateDisplay("Draw!");
+        gameActive = false;
+    }
+
+    const resetGame = () => {
+        activePlayer = players[pickRandomPlayer()];
+        gameActive = true;
+        board.resetBoard();
+        domController.resetBoard();
+        console.log("Game start!");
+        console.log(`${getActivePlayer().name}'s turn.`);
+        domController.updateDisplay(`${getActivePlayer().name}'s turn.`)
     }
 
     const playRound = (row, column) => {
@@ -121,8 +213,11 @@ function GameController(
         } else {
             console.log(`Placing ${getActivePlayer().name}'s marker on space ${row}-${column}...`);
             domController.renderBoard(board.getBoard());
-            if (checkForWin()) {
-                displayWinScreen(getActivePlayer());
+            if (board.checkForWin()) {
+                handleWin(getActivePlayer());
+                return;
+            } else if (board.checkForDraw()){
+                handleDraw();
                 return;
             }
             switchPlayerTurn();
@@ -130,48 +225,14 @@ function GameController(
         }
     }
 
-
-    printNewRound();
     DOMController.init();
 
     return {
         playRound,
-        getActivePlayer
+        getActivePlayer,
+        getGameActive,
+        resetGame,
     };
 }
-
-const DOMController = (() => {
-    const spaces = document.querySelectorAll(".board-space");
-
-    const renderBoard = (board) => {
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-                const index = i * 3 + j;
-                if (board[i][j].getValue() === 1) {
-                    spaces[index].innerHTML = "x";
-                } else if (board[i][j].getValue() === 2) {
-                    spaces[index].innerHTML = "o";
-                } else {
-                    spaces[index].innerHTML = "";
-                }
-            }
-        }
-    }
-
-    const handleSpaceClick = (event) => {
-        const index = Array.from(spaces).indexOf(event.target);
-        const row = Math.floor(index / 3);
-        const column = index % 3;
-
-        game.playRound(row + 1, column + 1);
-        renderBoard(GameBoard.getBoard());
-    }
-
-    const init = () => {
-        spaces.forEach(space => space.addEventListener("click", handleSpaceClick));
-    };
-
-    return { renderBoard, init };
-})();
 
 const game = GameController();
