@@ -1,4 +1,4 @@
-function GameBoard() {
+const GameBoard = (() => {
     const rows = 3;
     const columns = 3;
     const board = [];
@@ -13,18 +13,15 @@ function GameBoard() {
     const getBoard = () => board;
 
     const placeMarker = (row, column, player) => {
-        if (row < 0 || row >= rows || column < 0 || column >= columns) {
-            console.error("Invalid move: out-of-bounds indices");
-            return;
-        }
-        if (board[row][column].getValue() !== 0) return;
-        board[row][column].addMarker(player);
+        const validMove = board[row][column].getValue() === 0;
+        if (validMove) {
+            board[row][column].addMarker(player);
+        }        
+        return validMove;
     }
 
     const printBoard = () => {
-      const boardWithCellValues = board.map(
-                                    (row) => row.map(
-                                        (cell) => cell.getValue()))
+      const boardWithCellValues = board.map((row) => row.map((cell) => cell.getValue()))
       console.log(boardWithCellValues);
     };
 
@@ -49,13 +46,11 @@ function GameBoard() {
     }
 
     const checkDiagonalWin = () => {
-        // Check top-left to bottom-right diagonal
         const firstCellMain = board[0][0].getValue();
         if (firstCellMain !== 0 && board.every((row, index) => row[index].getValue() === firstCellMain)) {
             return true;
         }
 
-        // Check top-right to bottom-left diagonal
         const firstCellAnti = board[0][columns - 1].getValue();
         if (firstCellAnti !== 0 && board.every((row, index) => row[columns - 1 - index].getValue() === firstCellAnti)) {
             return true;
@@ -65,17 +60,15 @@ function GameBoard() {
     };
     
     return { getBoard, placeMarker, printBoard, checkRowWin, checkColumnWin, checkDiagonalWin };
-}
+})();
 
 function Cell() {
   let value = 0;
 
-  // Accept a player's token to change the value of the cell
   const addMarker = (player) => {
     value = player;
   };
 
-  // How we will retrieve the current value of this cell through closure
   const getValue = () => value;
 
   return { addMarker, getValue };
@@ -85,7 +78,8 @@ function GameController(
     playerOneName = "Player One",
     playerTwoName = "Player Two"
 ) {
-    const board = GameBoard();
+    const board = GameBoard;
+    const domController = DOMController;
 
     const players = [
         {
@@ -101,10 +95,10 @@ function GameController(
     let activePlayer = players[0];
 
     const getActivePlayer = () => activePlayer;
+
     const switchPlayerTurn = () => {
-        [players[0], players[1]] = [players[1], players[0]];
-        activePlayer = players[0];
-    }
+        activePlayer = activePlayer === players[0] ? players[1] : players[0];
+    };
 
     const printNewRound = () => {
         board.printBoard();
@@ -121,19 +115,24 @@ function GameController(
     }
 
     const playRound = (row, column) => {
-        board.placeMarker(row - 1, column - 1, getActivePlayer().marker);
-        console.log(
-            `Placing ${getActivePlayer().name}'s marker on space ${row}-${column}...`
-        );
-        if (checkForWin()) {
-            displayWinScreen(getActivePlayer());
-            return;
+        const validMove = board.placeMarker(row - 1, column - 1, getActivePlayer().marker);
+        if (!validMove) {
+            console.log("Invalid move: Space occupied");
+        } else {
+            console.log(`Placing ${getActivePlayer().name}'s marker on space ${row}-${column}...`);
+            domController.renderBoard(board.getBoard());
+            if (checkForWin()) {
+                displayWinScreen(getActivePlayer());
+                return;
+            }
+            switchPlayerTurn();
+            printNewRound();
         }
-        switchPlayerTurn();
-        printNewRound();
     }
 
+
     printNewRound();
+    DOMController.init();
 
     return {
         playRound,
@@ -141,8 +140,38 @@ function GameController(
     };
 }
 
-function DisplayController () {
+const DOMController = (() => {
+    const spaces = document.querySelectorAll(".board-space");
 
-}
+    const renderBoard = (board) => {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const index = i * 3 + j;
+                if (board[i][j].getValue() === 1) {
+                    spaces[index].innerHTML = "x";
+                } else if (board[i][j].getValue() === 2) {
+                    spaces[index].innerHTML = "o";
+                } else {
+                    spaces[index].innerHTML = "";
+                }
+            }
+        }
+    }
+
+    const handleSpaceClick = (event) => {
+        const index = Array.from(spaces).indexOf(event.target);
+        const row = Math.floor(index / 3);
+        const column = index % 3;
+
+        game.playRound(row + 1, column + 1);
+        renderBoard(GameBoard.getBoard());
+    }
+
+    const init = () => {
+        spaces.forEach(space => space.addEventListener("click", handleSpaceClick));
+    };
+
+    return { renderBoard, init };
+})();
 
 const game = GameController();
