@@ -88,19 +88,129 @@ function Cell() {
   return { addMarker, getValue };
 }
 
+
+function GameController() {
+    const board = GameBoard;
+    const domController = DOMController;
+
+    const players = [
+        {
+            name: "",
+            marker: 1
+        },
+        {
+            name: "",
+            marker: 2
+        }
+    ];
+
+    const pickRandomPlayer = () => {
+        return Math.floor(Math.random() * 2);
+    };
+
+    let gameActive = false;
+    let activePlayer = players[pickRandomPlayer()];
+
+    const getActivePlayer = () => activePlayer;
+
+    const getGameActive = () => gameActive;
+
+    const updatePlayerNames = (playerOne, playerTwo) => {
+        players[0].name = playerOne;
+        players[1].name = playerTwo;
+    }
+    
+    const switchPlayerTurn = () => {
+        activePlayer = activePlayer === players[0] ? players[1] : players[0];
+        domController.updateActivePlayer();
+        domController.updateDisplay(`${getActivePlayer().name}'s turn.`)
+    };  
+
+    const handleWin = () => {
+        domController.updateDisplay(`${getActivePlayer().name} wins!`);
+        gameActive = false;
+        domController.updateButtonState();
+    }
+
+    const handleDraw = () => {
+        domController.updateDisplay("Draw!");
+        gameActive = false;
+        domController.updateButtonState();
+    }
+
+    const resetGame = () => {
+        board.resetBoard();
+        domController.resetBoard();
+        const { valid, playerOneName, playerTwoName } = domController.getPlayers();
+        if (valid) {
+            updatePlayerNames(playerOneName, playerTwoName);
+            domController.showPlayers();
+        } else {
+            domController.updateDisplay("Please enter player names.");
+            return;
+        }
+        gameActive = true;
+        activePlayer = players[pickRandomPlayer()];
+        domController.updateActivePlayer();
+        domController.updateDisplay(`${getActivePlayer().name}'s turn.`);
+        domController.updateButtonState();
+    };
+
+    const playRound = (row, column) => {
+        const validMove = board.placeMarker(row - 1, column - 1, getActivePlayer().marker);
+        if (validMove) {
+            domController.renderBoard(board.getBoard());
+            if (board.checkForWin()) {
+                handleWin();
+                return;
+            } else if (board.checkForDraw()){
+                handleDraw();
+                return;
+            }
+            switchPlayerTurn();
+        }
+    }  
+
+    DOMController.init();
+
+    return {
+        playRound,
+        getActivePlayer,
+        getGameActive,
+        resetGame,
+    };
+}
+
+
 const DOMController = (() => {
     const spaces = document.querySelectorAll(".board-space");
     const newGame = document.querySelector(".new-game-button");
     const display = document.querySelector(".text-display");
+    const playerOneInput = document.querySelector(".p1-input");
+    const playerTwoInput = document.querySelector(".p2-input");
+    const playerOneName = document.querySelector(".p1-name");
+    const playerTwoName = document.querySelector(".p2-name");
+    const playerOneTitle = document.querySelector(".p1");
+    const playerTwoTitle = document.querySelector(".p2");
 
+    const fetchSVG = (path) => {
+        return fetch(path)
+            .then(response => response.text())
+            .then(svg => svg)
+            .catch(error => {
+                console.error("Error loading SVG:", error);
+                return '';
+            });
+    };
+      
     const renderBoard = (board) => {
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 const index = i * 3 + j;
                 if (board[i][j].getValue() === 1) {
-                    spaces[index].innerHTML = "x";
+                    fetchSVG("icons/close.svg").then(svg => spaces[index].innerHTML = svg);
                 } else if (board[i][j].getValue() === 2) {
-                    spaces[index].innerHTML = "o";
+                    fetchSVG("icons/circle.svg").then(svg => spaces[index].innerHTML = svg);
                 } else {
                     spaces[index].innerHTML = "";
                 }
@@ -130,96 +240,51 @@ const DOMController = (() => {
     }
 
     const updateButtonState = () => {
-        console.log("Game active state:", game.getGameActive());
         newGame.disabled = game.getGameActive();
     }
 
+    const getPlayers = () => {
+        const playerOneName = playerOneInput.value.trim();
+        const playerTwoName = playerTwoInput.value.trim();
+        const valid = playerOneName !== "" && playerTwoName !== "";
+        return { valid, playerOneName, playerTwoName };
+    };
+
+    const showPlayers = () => {
+        playerOneName.innerHTML = playerOneInput.value;
+        playerTwoName.innerHTML = playerTwoInput.value;
+        playerOneInput.style.display = "none";
+        playerTwoInput.style.display = "none";
+        playerOneName.style.display = "block";
+        playerTwoName.style.display = "block";
+    };
+
+    const updateActivePlayer = () => {
+        if (game.getActivePlayer().name === playerOneName.innerHTML) {
+            playerOneTitle.classList.add("active-player");
+            playerTwoTitle.classList.remove("active-player");
+        } else {
+            playerTwoTitle.classList.add("active-player");
+            playerOneTitle.classList.remove("active-player");
+        }
+    }
+    
     const init = () => {
         spaces.forEach(space => space.addEventListener("click", handleSpaceClick));
         newGame.addEventListener("click", () => game.resetGame());
+        playerOneName.style.display = "none";
+        playerTwoName.style.display = "none";
     };
 
-    return { renderBoard, resetBoard, updateDisplay, updateButtonState, init };
+    return { 
+        renderBoard, 
+        resetBoard, 
+        updateDisplay, 
+        updateButtonState, 
+        getPlayers, 
+        showPlayers, 
+        updateActivePlayer, 
+        init };
 })();
-
-function GameController(
-    playerOneName = "Player One",
-    playerTwoName = "Player Two"
-) {
-    const board = GameBoard;
-    const domController = DOMController;
-
-    const players = [
-        {
-            name: playerOneName,
-            marker: 1
-        },
-        {
-            name: playerTwoName,
-            marker: 2
-        }
-    ];
-
-    const pickRandomPlayer = () => {
-        return Math.floor(Math.random() * 2);
-    };
-
-    let gameActive = false;
-    let activePlayer = players[pickRandomPlayer()];
-
-    const getActivePlayer = () => activePlayer;
-
-    const getGameActive = () => gameActive;
-    
-    const switchPlayerTurn = () => {
-        activePlayer = activePlayer === players[0] ? players[1] : players[0];
-        domController.updateDisplay(`${getActivePlayer().name}'s turn.`)
-    };  
-
-    const handleWin = () => {
-        domController.updateDisplay(`${getActivePlayer().name} wins!`);
-        gameActive = false;
-        domController.updateButtonState();
-    }
-
-    const handleDraw = () => {
-        domController.updateDisplay("Draw!");
-        gameActive = false;
-        domController.updateButtonState();
-    }
-
-    const resetGame = () => {
-        activePlayer = players[pickRandomPlayer()];
-        gameActive = true;
-        board.resetBoard();
-        domController.resetBoard();
-        domController.updateDisplay(`${getActivePlayer().name}'s turn.`)
-        domController.updateButtonState();
-    }
-
-    const playRound = (row, column) => {
-        const validMove = board.placeMarker(row - 1, column - 1, getActivePlayer().marker);
-        if (validMove) {
-            domController.renderBoard(board.getBoard());
-            if (board.checkForWin()) {
-                handleWin();
-                return;
-            } else if (board.checkForDraw()){
-                handleDraw();
-                return;
-            }
-            switchPlayerTurn();
-        }
-    }
-
-    DOMController.init();
-
-    return {
-        playRound,
-        getActivePlayer,
-        getGameActive,
-        resetGame,
-    };
-}
 
 const game = GameController();

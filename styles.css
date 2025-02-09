@@ -46,16 +46,43 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding-bottom: 10px;
+}
+
+button {
+  font-size: 18pt;
+  color: #F4EDED;
+  background-color: #36827F;
+  border-radius: 16px;
+  margin-bottom: 6px;
+}
+
+input {
+  -webkit-appearance: none;
+  text-align: center;
+  border-radius: 16px;
+  border: none;
+  margin-top: 32px;
+}
+
+.name-input {
+  font-size: 14pt;
+  width: 200px;
+}
+
+:disabled {
+  background-color: #464D77;
+  color: #877666;
 }
 
 .game-area {
-  height: 850px;
+  height: 98vh;
   aspect-ratio: 1 / 1;
-  margin-top: 30px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .display-area {
@@ -69,12 +96,22 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   font-size: 20pt;
   text-align: center;
 }
 
 .player {
-  margin-bottom: 15px;
+  width: 150px;
+  background-color: #F4EDED;
+  padding: 0 10px 0 10px;
+  border: solid #877666 4px;
+  border-radius: 16px;
+}
+
+.player-name {
+  font-size: 25pt;
+  margin-top: 10px;
 }
 
 .center-area {
@@ -91,10 +128,12 @@ body {
   align-items: center;
   font-size: 24pt;
   background-color: #F4EDED;
-  height: 60px;
+  height: 45px;
   width: 400px;
   border: solid #877666 6px;
   border-radius: 4px;
+  margin-top: 20px;
+  padding: 0;
 }
 
 .outer-board {
@@ -105,6 +144,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 .inner-board {
@@ -129,3 +169,49 @@ body {
   margin: 0;
 }
 
+.board-space svg {
+  width: 100px;  /* Set the desired width */
+  height: 100px; /* Set the desired height */
+}
+
+
+.grid-line {
+  background-color: #877666;
+  position: absolute;
+  border-radius: 10px;
+}
+
+.v-1, .v-2 {
+  height: 85%;
+  width: 15px;
+}
+
+.h-1, .h-2 {
+  height: 15px;
+  width: 85%;
+}
+
+.v-1 { 
+  left: 33.3%;
+  transform: translateX(-33.3%);
+}
+
+.v-2 { 
+  left: 66.6%;
+  transform: translateX(-66.6%);
+}
+
+.h-1 { 
+  top: 33.3%;
+  transform: translateY(-33.3%);
+}
+
+.h-2 { 
+  top: 66.6%;
+  transform: translateY(-66.6%);
+}
+
+.active-player {
+  background-color: #36827F;
+  color: #F4EDED;
+}
